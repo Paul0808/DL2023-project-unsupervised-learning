@@ -1,6 +1,7 @@
 import os
 import pickle
 import numpy as np
+from PIL import Image
 
 
 def unpickle(file):
@@ -26,7 +27,8 @@ def get_normalize_info():
                   *batch4[b'data'].astype('float32'), 
                   *batch5[b'data'].astype('float32')]
     mean = np.mean([np.mean(img) for img in train_data])
-    std = np.std([np.std(img) for img in train_data])
+    # TODO: Ask if we should use sqrt of std instead of just mean
+    std = np.sqrt(np.mean([np.std(img) for img in train_data]))
     return mean,std
 
 
@@ -34,24 +36,37 @@ def get_normalize_info():
 def get_test_data():
     test = unpickle("data/cifar-10-batches-py/test_batch")
     test_labels = [*test[b'labels']]
-    test_data = [*test[b'data']]
+    test_data = [*test[b'data'].astype('float32')]
     # Normalize data
     mean,std = get_normalize_info()
     test_data -= mean
     test_data /= std
+    test_data = test_data.reshape(len(test_data),3,32,32).transpose(0,2,3,1)
     return test_labels, test_data
 
-def get_unsupervised_data():
-    batch1, batch2, batch3, batch4, batch5 = get_training_data()
-    data = [*batch1[b'data'].astype('float32'),
-            *batch2[b'data'].astype('float32'),
-            *batch3[b'data'].astype('float32'),
-            *batch4[b'data'].astype('float32'),
-            *batch5[b'data'].astype('float32')]
-    # Normalize data
-    mean,std = get_normalize_info()
-    data -= mean
-    data /= std
+def get_unsupervised_data(data_type= "train"):
+    if data_type == "train":
+        batch1, batch2, batch3, batch4, _ = get_training_data()
+        data = [*batch1[b'data'].astype('float32'),
+                *batch2[b'data'].astype('float32'),
+                *batch3[b'data'].astype('float32'),
+                *batch4[b'data'].astype('float32')]
+    elif data_type == "validation":
+        _, _, _, _, batch5 = get_training_data()
+        data = [*batch5[b'data'].astype('float32')]
+    elif data_type == "test":
+        _, data = get_test_data()
+    else:
+        print(data_type)
+        raise Exception("Not correct data type, choose: train, test or validation as input")
+    
+    if (data_type == "train") or (data_type == "validation"):
+        # Normalize data
+        mean,std = get_normalize_info()
+        data -= mean
+        data /= std
+        data = data.reshape(len(data),3,32,32).transpose(0,2,3,1)
+
     return data
 
 def get_semisupervised_data(no_batches:int = 1):
@@ -78,19 +93,24 @@ def get_semisupervised_data(no_batches:int = 1):
     mean,std = get_normalize_info()
     unlabeled_data -= mean
     unlabeled_data /= std
+    unlabeled_data = unlabeled_data.reshape(len(unlabeled_data),3,32,32).transpose(0,2,3,1)
     labeled_data -= mean
     labeled_data /= std
+    labeled_data = labeled_data.reshape(len(labeled_data),3,32,32).transpose(0,2,3,1)
 
     return training_labels, labeled_data, unlabeled_data
+
 def test():
     data = get_unsupervised_data()
     _,test =get_test_data()
     training_labels, labeled_data, unlabeled_data = get_semisupervised_data()
-    get_normalize_info()
+    print(get_normalize_info())
     print('Data Type: %s' % labeled_data[0].dtype)
-    print('Min: %.3f, Max: %.3f' % (data[0].min(), data[0].max()))
     print('Min: %.3f, Max: %.3f' % (test[0].min(), test[0].max()))
-    print(len(training_labels),labeled_data, len(unlabeled_data))
+    print(test.shape)
+    print('Min: %.3f, Max: %.3f' % (labeled_data[0].min(), labeled_data[0].max()))
+    print(len(training_labels),labeled_data[0],labeled_data[0].shape, len(unlabeled_data), labeled_data[0].shape)
+    
 
 if __name__ == "__main__":
     test()
