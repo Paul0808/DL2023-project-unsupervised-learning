@@ -6,6 +6,11 @@ from numpy.random import randint
 
 from scipy.spatial.distance import cdist
 
+from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, EarlyStopping
+from keras.optimizers import Adam
+from time import strftime, localtime
+
+
 import h5py
 from os import mkdir
 from pathlib import Path
@@ -47,3 +52,33 @@ def generate_hamming(crops_no = 9, permutations_no = 100):
 
     # Returning the final permutations
     return final_permutations
+
+# TODO: might need changing
+def get_compiler_parameters(optimizer_lr=0.001, optimizer_beta_1=0.9, optimizer_beta_2=0.999,
+                            stopping_monitor="val_loss", stopping_patience=5, stopping_verbose=1, 
+                            checkpoint_monitor="val_loss", checkpoint_verbose=1, 
+                            plateau_monitor="val_loss", plateau_patience=3, plateau_verbose=1):
+
+    optimizer = Adam(learning_rate= optimizer_lr, beta_1= optimizer_beta_1, beta_2= optimizer_beta_2)
+
+    stop = EarlyStopping(monitor= stopping_monitor, patience= stopping_patience, verbose= stopping_verbose)
+    
+    if not(Path("models").exists()):
+        mkdir("models")
+    if not(Path("models/checkpoints").exists()):
+        mkdir("models/checkpoints")
+    path_checkpoint = "models/checkpoints/{}".format(strftime("%b_%d_%H_%M_%S", localtime()))
+    mkdir(path_checkpoint)
+
+    checkpoint = ModelCheckpoint(path_checkpoint + "/weights.hdf5", monitor= checkpoint_monitor, verbose= checkpoint_verbose, save_best_only= True)
+    
+    plateau_reduction = ReduceLROnPlateau(monitor= plateau_monitor, patience= plateau_patience, verbose= plateau_verbose)
+
+    callbacks = [stop, checkpoint, plateau_reduction]
+    return optimizer, callbacks
+
+
+# Function that one hot encodes the labels
+def encode(labels, max_length):
+    labels = np.array([[0 if labels[i] != j else 1 for j in range(max_length)] for i in range(len(labels))])
+    return labels

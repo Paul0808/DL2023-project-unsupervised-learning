@@ -3,6 +3,8 @@ import pickle
 import numpy as np
 from PIL import Image
 
+from utils import encode
+
 
 def unpickle(file):
     import pickle
@@ -42,7 +44,11 @@ def get_test_data():
     test_data -= mean
     test_data /= std
     test_data = test_data.reshape(len(test_data),3,32,32).transpose(0,2,3,1)
-    return test_labels, test_data
+
+    # One hot encoding test labels
+    test_labels = encode(labels=test_labels, max_length=10)
+
+    return test_data, test_labels
 
 def get_unsupervised_data(data_type= "train"):
     if data_type == "train":
@@ -80,13 +86,18 @@ def get_semisupervised_data(no_batches:int = 1):
     
     training_labels=[]
     labeled_data=[]
+    validation_labels=[]
+    validation_data=[]
     unlabeled_data=[]
     
     for i in range(no_batches):
         training_labels = [*training_labels, *all_training_labels[i]]
         labeled_data = [*labeled_data, *all_training_data[i]]
+    
+    validation_labels = [*all_training_labels[no_batches]]
+    validation_data = [*all_training_data[no_batches]]
 
-    for i in range(no_batches,5):
+    for i in range(no_batches + 1,5):
         unlabeled_data = [*unlabeled_data, *all_training_data[i]]
 
     # Normalize data
@@ -98,12 +109,16 @@ def get_semisupervised_data(no_batches:int = 1):
     labeled_data /= std
     labeled_data = labeled_data.reshape(len(labeled_data),3,32,32).transpose(0,2,3,1)
 
-    return training_labels, labeled_data, unlabeled_data
+    training_labels = encode(labels=training_labels, max_length=10)
+    validation_labels = encode(labels=validation_labels, max_length=10)
+
+    return labeled_data, training_labels, validation_data, validation_labels, unlabeled_data
 
 def test():
     data = get_unsupervised_data()
-    _,test =get_test_data()
-    training_labels, labeled_data, unlabeled_data = get_semisupervised_data()
+    test, test_labels =get_test_data()
+    labeled_data, training_labels, validation_data, validation_labels, unlabeled_data = get_semisupervised_data()
+    print(labeled_data.shape)
     print(get_normalize_info())
     print('Data Type: %s' % labeled_data[0].dtype)
     print('Min: %.3f, Max: %.3f' % (test[0].min(), test[0].max()))
