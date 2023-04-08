@@ -55,7 +55,7 @@ def generate_hamming(crops_no = 9, permutations_no = 100):
 
 # TODO: might need changing
 def get_compiler_parameters(optimizer_lr=0.001, optimizer_beta_1=0.9, optimizer_beta_2=0.999,
-                            stopping_monitor="val_loss", stopping_patience=5, stopping_verbose=1, 
+                            stopping_monitor="val_loss", stopping_patience=10, stopping_verbose=1, 
                             checkpoint_monitor="val_loss", checkpoint_verbose=1, 
                             plateau_monitor="val_loss", plateau_patience=3, plateau_verbose=1):
 

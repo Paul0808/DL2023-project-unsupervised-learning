@@ -61,14 +61,14 @@ def create_jigsaw(image, hamming, index, permutations_no= 100, crop_dimensions= 
     return jigsaw_puzzle, index
 
 
-def generate_jigsaw_data(data_type= "train", permutations_no=100, permutations_chosen= 10, crop_area= 27, crop_dimensions= 7, crops_no= 9, channels_no= 3):
+def generate_jigsaw_data(data_type= "train", dataset="cifar10", permutations_no=100, permutations_chosen= 10, crop_area= 27, crop_dimensions= 7, crops_no= 9, channels_no= 3):
     # Import the correct data for training validation and testing
     if data_type == "train":
-        images= get_unsupervised_data("train")
+        images= get_unsupervised_data("train", dataset=dataset)
     elif data_type == "validation":
-        images= get_unsupervised_data("validation")
+        images= get_unsupervised_data("validation", dataset=dataset)
     elif data_type == "test":
-        images= get_unsupervised_data("test")
+        images= get_unsupervised_data("test", dataset=dataset)
     else:
         print(data_type)
         raise Exception("Not correct data type, choose: train, test or validation as input")
@@ -95,10 +95,10 @@ def generate_jigsaw_data(data_type= "train", permutations_no=100, permutations_c
     # For each image create a jigsaw puzzle, with its label and append it to their specific arrays/list
     for index_img in range(len(images)):
         for i in range(permutations_chosen):
-            jigsaw, y[(index_img * 10) + i] = create_jigsaw(images[index_img], hamming, permutation_index[i], permutations_no, crop_dimensions, crops_no, crop_area)
+            jigsaw, y[(index_img * permutations_chosen) + i] = create_jigsaw(images[index_img], hamming, permutation_index[i], permutations_no, crop_dimensions, crops_no, crop_area)
             
             for index_crop in range(crops_no):
-                x[index_crop][(index_img * 10) + i, :, :, :] = jigsaw[:, :, :, index_crop]
+                x[index_crop][(index_img * permutations_chosen) + i, :, :, :] = jigsaw[:, :, :, index_crop]
 
     # One hot encoding the labels
     y = encode(y, len(hamming))
@@ -116,11 +116,11 @@ def generate_jigsaw_data(data_type= "train", permutations_no=100, permutations_c
     # Returning the jigsaw data and labels
     return x,y
 
-def read_jigsaw_data(data_type= "train", permutations_no=100):
+def read_jigsaw_data(data_type= "train", dataset="cifar10", permutations_no=100, crop_area= 27, crop_dimensions= 7, crops_no= 9):
     try:
         file = h5py.File("data/unsupervised/"+ str(data_type)+ "_" + str(permutations_no) + '.h5', 'r')
     except FileNotFoundError:
-        generate_jigsaw_data(data_type=data_type, permutations_no=permutations_no)
+        generate_jigsaw_data(data_type=data_type, dataset=dataset, permutations_no=permutations_no, crop_area=crop_area, crop_dimensions=crop_dimensions, crops_no=crops_no)
         file = h5py.File("data/unsupervised/"+ str(data_type)+ "_" + str(permutations_no) + '.h5', 'r')
     x_saved = list(file[data_type + '_data'])
     y_saved = np.array(file[data_type + "_labels"])
@@ -129,8 +129,8 @@ def read_jigsaw_data(data_type= "train", permutations_no=100):
     return x_saved, y_saved
     
 
-# x,y = generate_jigsaw_data("train")
-# print(x[0].shape)
+x,y = read_jigsaw_data("validation")
+print(x[0].shape)
 # # Getting the hamming set if available otherwise generate a hamming set
 
 # file = h5py.File("data/unsupervised/train_100.h5", 'r')

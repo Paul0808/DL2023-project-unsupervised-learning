@@ -15,7 +15,8 @@ from pathlib import Path
 # TODO: remove to run on gpu
 environ["CUDA_VISIBLE_DEVICES"] = "-1"
 class CFN(Model):
-    def __init__(self, permutations_no=100, crop_dimensions=7, crops_no=9, channels_no=3, resnet_architecture=[2, 2, 2, 2], *args, **kwargs):
+    def __init__(self, permutations_no=100, crop_dimensions=7, crops_no=9, channels_no=3, resnet_architecture=[1, 1, 1], *args, **kwargs):
+        self.resnet_architecture = resnet_architecture
         # Declare the input for the 9 siamese blocks
         inputs= [Input((crop_dimensions, crop_dimensions, channels_no)) for _ in range(crops_no)]
         
@@ -49,12 +50,12 @@ class CFN(Model):
         
         history = self.fit(x= x_train, y= y_train, epochs= epochs, batch_size=batch_size, validation_data= (x_validation, y_validation), callbacks= callbacks)
         
-        self.save("models/CFN_" + str(permutations_no) + ".hdf5")
+        self.save("models/CFN_" + str(permutations_no) + "_blockx" + str(self.resnet_architecture[0]) + "_len" + len(self.resnet_architecture) + ".hdf5")
 
-        if not(Path("data/models/history").exists()):
-            mkdir("data/model/history")
+        if not(Path("models/history").exists()):
+            mkdir("models/history")
 
-        with open('data/models/history/history_unsupervised.pkl', 'wb') as history_file:
+        with open("models/history/history_unsupervised" + "_blockx" + str(self.resnet_architecture[0]) + "_len" + len(self.resnet_architecture) + ".pkl", 'wb') as history_file:
             pkl.dump(history.history, history_file)
         
         return history
@@ -63,9 +64,9 @@ class CFN(Model):
         x_test, y_test = read_jigsaw_data("test")
         scores = self.evaluate(x= x_test, y= y_test)
         
-        if not(Path("data/models/scores").exists()):
-            mkdir("data/model/scores")
-        with open('data/models/history/scores_unsupervised.pkl', 'wb') as scores_file:
+        if not(Path("models/scores").exists()):
+            mkdir("models/scores")
+        with open("models/history/scores_unsupervised" + "_blockx" + str(self.resnet_architecture[0]) + "_len" + len(self.resnet_architecture) + ".pkl", 'wb') as scores_file:
             pkl.dump(scores, scores_file)
 
     def __call__(self, *args, **kwargs):
@@ -135,10 +136,10 @@ class ResNet34_refrence(Model):
         history = self.fit(x= x_train, y= y_train, epochs= epochs, batch_size= batch_size, validation_data= (x_validation, y_validation), callbacks= callbacks)
         self.save("models/resnet.hdf5")
 
-        if not(Path("data/models/history").exists()):
-            mkdir("data/model/history")
+        if not(Path("models/history").exists()):
+            mkdir("models/history")
 
-        with open("data/models/history/history_reference_" + data_type + ".pkl", 'wb') as history_file:
+        with open("models/history/history_reference_" + data_type + ".pkl", 'wb') as history_file:
             pkl.dump(history.history, history_file)
         
         return history
@@ -147,9 +148,9 @@ class ResNet34_refrence(Model):
         x_test, y_test = get_test_data()
         scores = self.evaluate(x= x_test, y= y_test)
         
-        if not(Path("data/models/scores").exists()):
-            mkdir("data/model/scores")
-        with open("data/models/history/scores_reference_" + data_type + ".pkl", 'wb') as scores_file:
+        if not(Path("models/scores").exists()):
+            mkdir("models/scores")
+        with open("models/scores/scores_reference_" + data_type + ".pkl", 'wb') as scores_file:
             pkl.dump(scores, scores_file)
 
     def __call__(self, *args, **kwargs):
@@ -158,6 +159,7 @@ class ResNet34_refrence(Model):
 
 
 model = CFN()
+model.summary()
 model.train()
 model.test()
 # model1 = CFN_transfer()
