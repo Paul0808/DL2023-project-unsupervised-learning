@@ -115,7 +115,7 @@ def generate_jigsaw_data(data_type= "train", dataset="cifar10", permutations_no=
     # Save jigsaw dataset
     if not(Path("data/unsupervised").exists()):
         mkdir("data/unsupervised")
-    file = h5py.File("data/unsupervised/"+ str(data_type)+ "_" + str(permutations_no) + '.h5', 'w')
+    file = h5py.File("data/unsupervised/" + str(dataset) + "_" + str(data_type)+ "_" + str(permutations_no) + '.h5', 'w')
     file.create_dataset(str(data_type) + '_data', data= x)
     file.create_dataset(str(data_type) + '_labels', data= y)
     file.close()
@@ -137,11 +137,11 @@ def generate_jigsaw_data(data_type= "train", dataset="cifar10", permutations_no=
 
 def read_jigsaw_data(data_type= "train", dataset="stl10", permutations_no=100, permutations_chosen=3, crop_area= 90, crop_dimensions= 27, crops_no= 9):
     try:
-        file = h5py.File("data/unsupervised/"+ str(data_type)+ "_" + str(permutations_no) + '.h5', 'r')
+        file = h5py.File("data/unsupervised/" + str(dataset) + "_" + str(data_type)+ "_" + str(permutations_no) + '.h5', 'r')
     except FileNotFoundError:
         print("Jigsaw " + str(data_type) + " dataset generating for: " + str(permutations_no) + " permutations, from which: " + str(permutations_chosen) + " chosen per image")
         generate_jigsaw_data(data_type=data_type, dataset=dataset, permutations_no=permutations_no, permutations_chosen=permutations_chosen, crop_area=crop_area, crop_dimensions=crop_dimensions, crops_no=crops_no)
-        file = h5py.File("data/unsupervised/"+ str(data_type)+ "_" + str(permutations_no) + '.h5', 'r')
+        file = h5py.File("data/unsupervised/" + str(dataset) + "_" + str(data_type)+ "_" + str(permutations_no) + '.h5', 'r')
     x_saved = list(file[data_type + '_data'])
     y_saved = np.array(file[data_type + "_labels"])
     file.close
