@@ -55,13 +55,13 @@ def generate_hamming(crops_no = 9, permutations_no = 100):
 
 # TODO: might need changing
 def get_compiler_parameters(optimizer_lr=0.001, optimizer_beta_1=0.9, optimizer_beta_2=0.999,
-                            stopping_monitor="val_loss", stopping_patience=10, stopping_verbose=1, 
+                            stopping_monitor="val_loss", stopping_patience=6, stopping_verbose=1, stopping_delta=0.01,
                             checkpoint_monitor="val_loss", checkpoint_verbose=1, 
-                            plateau_monitor="val_loss", plateau_patience=3, plateau_verbose=1):
+                            plateau_monitor="val_loss", plateau_patience=3, plateau_verbose=1, plateau_factor=0.5, plateau_delta= 0.005):
 
     optimizer = Adam(learning_rate= optimizer_lr, beta_1= optimizer_beta_1, beta_2= optimizer_beta_2)
 
-    stop = EarlyStopping(monitor= stopping_monitor, patience= stopping_patience, verbose= stopping_verbose)
+    stop = EarlyStopping(monitor= stopping_monitor, patience= stopping_patience, verbose= stopping_verbose, min_delta=stopping_delta)
     
     if not(Path("models").exists()):
         mkdir("models")
@@ -72,7 +72,7 @@ def get_compiler_parameters(optimizer_lr=0.001, optimizer_beta_1=0.9, optimizer_
 
     checkpoint = ModelCheckpoint(path_checkpoint + "/weights.hdf5", monitor= checkpoint_monitor, verbose= checkpoint_verbose, save_best_only= True)
     
-    plateau_reduction = ReduceLROnPlateau(monitor= plateau_monitor, patience= plateau_patience, verbose= plateau_verbose)
+    plateau_reduction = ReduceLROnPlateau(monitor= plateau_monitor, patience= plateau_patience, verbose= plateau_verbose, factor= plateau_factor, min_delta=plateau_delta)
 
     callbacks = [stop, checkpoint, plateau_reduction]
     return optimizer, callbacks

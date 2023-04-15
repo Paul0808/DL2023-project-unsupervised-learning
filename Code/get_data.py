@@ -69,9 +69,9 @@ def get_test_data(dataset="stl10"):
     elif dataset == "cifar10":
         test_data = np.array(test_data).reshape(len(test_data),3,32,32).transpose(0,2,3,1)
     # Normalize data
-    mean,std = get_normalize_info(dataset=dataset)
-    test_data -= mean
-    test_data /= std
+    # mean,std = get_normalize_info(dataset=dataset)
+    # test_data -= mean
+    # test_data /= std
 
     # One hot encoding test labels
     test_labels = encode(labels=test_labels, max_length=10)
@@ -106,19 +106,21 @@ def get_unsupervised_data(data_type= "train", dataset="stl10"):
                 _, data = train_test_split(data, test_size=0.2, random_state=35)
 
         # Normalize data
-        mean,std = get_normalize_info(dataset=dataset)
-        data -= mean
-        data /= std
+        # mean,std = get_normalize_info(dataset=dataset)
+        # data -= mean
+        # data /= std
 
     elif data_type == "test":
         data, _ = get_test_data(dataset=dataset)
-        mean,std = get_normalize_info(dataset=dataset)
-        data -= mean
-        data /= std
+        # mean,std = get_normalize_info(dataset=dataset)
+        # data -= mean
+        # data /= std
     else:
         print(data_type)
         raise Exception("Not correct data type, choose: train, test or validation as input")
-
+    
+    # img = Image.fromarray(data[5].astype("uint8"))
+    # img.show()
     return data
 
 def get_semisupervised_data(dataset="stl10", no_batches:int = 1):
@@ -163,13 +165,17 @@ def get_semisupervised_data(dataset="stl10", no_batches:int = 1):
     
 
     # Normalize data
-    mean,std = get_normalize_info(dataset=dataset)
-    unlabeled_data -= mean
-    unlabeled_data /= std
-    labeled_data -= mean
-    labeled_data /= std
-    validation_data -= mean
-    validation_data /= std
+    # img = Image.fromarray(validation_data[5].astype("uint8"))
+    # img.show()
+    # mean,std = get_normalize_info(dataset=dataset)
+    # unlabeled_data -= mean
+    # unlabeled_data /= std
+    # labeled_data -= mean
+    # labeled_data /= std
+    # validation_data -= mean
+    # validation_data /= std
+    # img = Image.fromarray(validation_data[5].astype("uint8"))
+    # img.show()
 
     training_labels = encode(labels=training_labels, max_length=10)
     validation_labels = encode(labels=validation_labels, max_length=10)
@@ -177,10 +183,13 @@ def get_semisupervised_data(dataset="stl10", no_batches:int = 1):
     return labeled_data, training_labels, validation_data, validation_labels, unlabeled_data
 
 def test():
+    print(1)
     #labeled_data, training_labels, unlabeled_data = get_training_data()
     #print(training_labels.shape)
-    #data = get_unsupervised_data()
-    labeled_data, training_labels, validation_data, validation_labels, unlabeled_data = get_semisupervised_data()
+    # data = get_unsupervised_data()
+    # labeled_data, training_labels, validation_data, validation_labels, unlabeled_data = get_semisupervised_data()
+    # img = Image.fromarray(validation_data[3].astype("uint8"))
+    # img.show()
     # data = get_unsupervised_data()
     # test, test_labels =get_test_data()
     # labeled_data, training_labels, validation_data, validation_labels, unlabeled_data = get_semisupervised_data()

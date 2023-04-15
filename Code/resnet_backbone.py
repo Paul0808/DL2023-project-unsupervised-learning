@@ -1,7 +1,9 @@
 
 from keras.models import Model
-from keras.layers import Input, Concatenate, Conv2D, BatchNormalization, Activation, Add, ZeroPadding2D, MaxPool2D, AveragePooling2D, Flatten, Dense
+from keras.layers import Input, Concatenate, Conv2D, BatchNormalization, Activation, Add, ZeroPadding2D, MaxPool2D, AveragePooling2D, Flatten, Dense, Rescaling
 from keras import backend
+
+from color_affine_layer import RandomColorAffine
 
 # Block that passes forward the residual input to the output
 def identity_mapping(input, filters_no, channels_axis= 3):
@@ -60,7 +62,15 @@ def resnet_creator(input, input_shape=(7, 7, 3), architecture=[3, 4, 6, 3]):
 
     # Declare input layer
     #input = Input(input_shape)
-    #x = ZeroPadding2D(3)(input)
+
+    # Normalize input to be between 0 and 1
+    input = Rescaling(1/255)(input)
+    
+    # Weak jitter and brightness augmentation
+    input = RandomColorAffine(brightness=0.2, jitter=0.1)(input)
+
+    # Padd input
+    x = ZeroPadding2D(3)(input)
 
     # First layer and Max Pool
     x = Conv2D(filters=filters_no, kernel_size=7, strides=2, padding="same")(input)
@@ -84,7 +94,7 @@ def resnet_creator(input, input_shape=(7, 7, 3), architecture=[3, 4, 6, 3]):
     # Adding Average Pooling and dense layer
     x = AveragePooling2D(pool_size=2, padding= "same")(x)
     x = Flatten()(x)
-    x = Dense(units= 512, activation="relu")(x)
+    x = Dense(units= filters_no, activation="relu")(x)
     
     #resnet = Model(inputs= input, outputs= x, name=name)
     

@@ -1,7 +1,8 @@
 
-from keras.models import Model
+from keras.models import Model, load_model
 from keras.layers import Input, Concatenate, Dense, Dropout
 from keras import backend
+from keras.utils import plot_model
 
 import pickle as pkl
 
@@ -15,47 +16,50 @@ from pathlib import Path
 # TODO: remove to run on gpu
 environ["CUDA_VISIBLE_DEVICES"] = "-1"
 class CFN(Model):
-    def __init__(self, permutations_no=100, crop_dimensions=7, crops_no=9, channels_no=3, resnet_architecture=[1, 1, 1], *args, **kwargs):
+    def __init__(self, permutations_no=100, crop_dimensions=27, crops_no=9, channels_no=3, resnet_architecture=[1, 1, 1], *args, **kwargs):
+        self.permutations_no = permutations_no
+        self.crop_dimensions = crop_dimensions
+        self.crops_no = crops_no
+        self.channels_no = channels_no
         self.resnet_architecture = resnet_architecture
+
         # Declare the input for the 9 siamese blocks
-        inputs= [Input((crop_dimensions, crop_dimensions, channels_no)) for _ in range(crops_no)]
+        inputs= [Input((self.crop_dimensions, self.crop_dimensions, self.channels_no)) for _ in range(self.crops_no)]
         
         # Generating the 9 resnet blocks
-        resnet = resnet_creator(inputs[0], input_shape= (crop_dimensions, crop_dimensions, channels_no), architecture= resnet_architecture)
-        siammese_blocks = [resnet_creator(block_input, input_shape= (crop_dimensions, crop_dimensions, channels_no), architecture= resnet_architecture) for block_input in inputs]
-
+        siammese_blocks = [resnet_creator(block_input, input_shape= (self.crop_dimensions, self.crop_dimensions, self.channels_no), architecture= self.resnet_architecture) for block_input in inputs]
         x = Concatenate()(siammese_blocks)
 
         # Declaring the first dense layer after the concatentation
         # One unit for each neuron in last layer so 512*9 (same as paper)
-        x = Dense(units=4608, activation="relu")(x)
+        x = Dense(units=2304, activation="relu")(x)
         x = Dropout(0.5)(x)
 
         # Declaring second dense layer after concatenation
         # Same units as paper
-        x = Dense(units=4096, activation="relu")(x)
+        x = Dense(units=2048, activation="relu")(x)
         x = Dropout(0.5)(x)
 
         # Declaring output layer
-        x = Dense(units=permutations_no, activation="softmax")(x)
+        x = Dense(units=self.permutations_no, activation="softmax")(x)
 
         super().__init__(inputs=inputs, outputs=x, name="CFN", *args, **kwargs)
 
-    def train(self, epochs=100, batch_size=64, permutations_no=100):
+    def train(self, epochs=100, batch_size=256, permutations_no=100):
         optimizer, callbacks = get_compiler_parameters()
         self.compile(optimizer= optimizer, metrics= ["accuracy"], loss= "categorical_crossentropy")
         
         x_train, y_train = read_jigsaw_data(data_type="train")
         x_validation, y_validation = read_jigsaw_data(data_type="validation")
         
-        history = self.fit(x= x_train, y= y_train, epochs= epochs, batch_size=batch_size, validation_data= (x_validation, y_validation), callbacks= callbacks)
+        history = self.fit(x= x_train, y= y_train, epochs= epochs, batch_size=batch_size, validation_data= (x_validation, y_validation), callbacks= callbacks, shuffle= False)
         
-        self.save("models/CFN_" + str(permutations_no) + "_blockx" + str(self.resnet_architecture[0]) + "_len" + len(self.resnet_architecture) + ".hdf5")
+        self.save("models/CFN_stl_" + str(permutations_no) + ".hdf5")
 
         if not(Path("models/history").exists()):
             mkdir("models/history")
 
-        with open("models/history/history_unsupervised" + "_blockx" + str(self.resnet_architecture[0]) + "_len" + len(self.resnet_architecture) + ".pkl", 'wb') as history_file:
+        with open("models/history/history_unsupervised_stl.pkl", 'wb') as history_file:
             pkl.dump(history.history, history_file)
         
         return history
@@ -66,14 +70,27 @@ class CFN(Model):
         
         if not(Path("models/scores").exists()):
             mkdir("models/scores")
-        with open("models/history/scores_unsupervised" + "_blockx" + str(self.resnet_architecture[0]) + "_len" + len(self.resnet_architecture) + ".pkl", 'wb') as scores_file:
+        with open("models/history/scores_unsupervised_stl.pkl", 'wb') as scores_file:
             pkl.dump(scores, scores_file)
+
+        print("Test loss: " + str(scores[0]))
+        print("Test accuracy: " + str(scores[1]))
+    
+    def get_config(self):
+        config = super().get_config()
+        config.update({"name": self.name,
+        "permutations_no": self.permutations_no,
+        "crop_dimensions": self.crop_dimensions,
+        "crops_no": self.crops_no,
+        "channels_no": self.channels_no,
+        "resnet_architecture": self.resnet_architecture})
+        return config
 
     def __call__(self, *args, **kwargs):
         return super().__call__(*args, **kwargs)
 
 class CFN_transfer(Model):
-    def __init__(self, classes_no=10, image_dimensions=32, siamese_no=9, channels_no=3, resnet_architecture=[2, 2, 2, 2], *args, **kwargs):
+    def __init__(self, classes_no=10, image_dimensions=96, siamese_no=9, channels_no=3, resnet_architecture=[1, 1, 1], *args, **kwargs):
         # Declare the input for the 1 image 32x32x3
         inputs= Input((image_dimensions, image_dimensions, channels_no))
         
@@ -101,12 +118,17 @@ class CFN_transfer(Model):
         optimizer, callbacks = get_compiler_parameters()
         self.compile(optimizer= optimizer, metrics= ["accuracy"], loss= "categorical_crossentropy")
         
-        x_train, y_train = read_jigsaw_data(data_type= "train", permutations_no= permutations_no)
-        x_validation, y_validation = read_jigsaw_data(data_type= "validation", permutations_no= permutations_no)
+        x_train, y_train, x_validation, y_validation, _ = get_semisupervised_data()
         
         history = self.fit(x= x_train, y= y_train, epochs= epochs, batch_size= batch_size, validation_data= (x_validation, y_validation), callbacks= callbacks)
         
         self.save("models/CFN_transfered.hdf5")
+
+        if not(Path("models/history").exists()):
+            mkdir("models/history")
+
+        with open("models/history/history_CFN_labeled.pkl", 'wb') as history_file:
+            pkl.dump(history.history, history_file)
         return history
 
     def __call__(self, *args, **kwargs):
@@ -153,15 +175,19 @@ class ResNet34_refrence(Model):
         with open("models/scores/scores_reference_" + data_type + ".pkl", 'wb') as scores_file:
             pkl.dump(scores, scores_file)
 
+        print("Test loss: " + str(scores[0]))
+        print("Test accuracy: " + str(scores[1]))
+
     def __call__(self, *args, **kwargs):
         return super().__call__(*args, **kwargs)
 
 
 
 model = CFN()
-model.summary()
-model.train()
-model.test()
+plot_model(model, to_file="models/CFN_multiple_inputs.png")
+# model.summary()
+# model.train()
+# model.test()
 # model1 = CFN_transfer()
 
 #model.summary()

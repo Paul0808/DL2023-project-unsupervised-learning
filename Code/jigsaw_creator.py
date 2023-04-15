@@ -1,13 +1,17 @@
 from get_data import get_unsupervised_data
 from utils import generate_hamming, encode
 
-from random import randrange, randint, sample
+from random import randrange, randint, sample, seed
+
+from tqdm import tqdm
 
 import numpy as np
 
 import h5py
 from os import mkdir
 from pathlib import Path
+
+from PIL import Image
 
 # Funtion that jitters the colour channels of the image to prevent colour aberation and overfitting
 # By default it will jitter all colour channels, in all directions randomly within 1 pixel
@@ -37,7 +41,7 @@ def create_jigsaw(image, hamming, index, permutations_no= 100, crop_dimensions= 
     zone_size = crop_area/3 
 
     # Jitter colour to prevent colour aberation problem
-    image = jitter(image)
+    # image = jitter(image)
 
     # Generate random coordinates for where the cropping area should start
     start_x = randrange(img_size-crop_area)
@@ -72,10 +76,15 @@ def generate_jigsaw_data(data_type= "train", dataset="cifar10", permutations_no=
     else:
         print(data_type)
         raise Exception("Not correct data type, choose: train, test or validation as input")
+    # img = Image.fromarray(images[0].astype("uint8"))
+    # img.show()
 
     # Create empty arrays for the data and labels, coresponding to the final dimension that they should have
-    x = [np.empty(((len(images) * permutations_chosen), crop_dimensions, crop_dimensions, channels_no), np.float32)]*crops_no
+    x = [np.empty(((len(images) * permutations_chosen), crop_dimensions, crop_dimensions, channels_no), np.float32) for _ in range(crops_no)]
     y = np.empty(len(images) * permutations_chosen)
+
+    # Setting a seed to have constant labels between validation, test, train
+    seed(35)
 
     # Sample n different indexes for the permutations based on how many permutations need to be taken for each image
     permutation_index = sample(range(permutations_no), permutations_chosen)
@@ -93,12 +102,12 @@ def generate_jigsaw_data(data_type= "train", dataset="cifar10", permutations_no=
     
     # TODO: check if indexing is correct
     # For each image create a jigsaw puzzle, with its label and append it to their specific arrays/list
-    for index_img in range(len(images)):
+    for index_img in tqdm(range(len(images))):
         for i in range(permutations_chosen):
             jigsaw, y[(index_img * permutations_chosen) + i] = create_jigsaw(images[index_img], hamming, permutation_index[i], permutations_no, crop_dimensions, crops_no, crop_area)
             
             for index_crop in range(crops_no):
-                x[index_crop][(index_img * permutations_chosen) + i, :, :, :] = jigsaw[:, :, :, index_crop]
+                x[index_crop][(index_img * permutations_chosen) + i] = jigsaw[:, :, :, index_crop]
 
     # One hot encoding the labels
     y = encode(y, len(hamming))
@@ -112,15 +121,26 @@ def generate_jigsaw_data(data_type= "train", dataset="cifar10", permutations_no=
     file.close()
     print("Jigsaw " + str(data_type) + " dataset has been saved for: " + str(permutations_no) + " permutations, from which: " + str(permutations_chosen) + " chosen per image")
 
+    # img = Image.fromarray(x[0][0].astype("uint8"))
+    # img.show()
+    # img = Image.fromarray(x[1][0].astype("uint8"))
+    # img.show()
+    # img = Image.fromarray(x[2][0].astype("uint8"))
+    # img.show()
+    # img = Image.fromarray(x[3][0].astype("uint8"))
+    # img.show()
+    # img = Image.fromarray(x[4][0].astype("uint8"))
+    # img.show()
 
     # Returning the jigsaw data and labels
     return x,y
 
-def read_jigsaw_data(data_type= "train", dataset="cifar10", permutations_no=100, crop_area= 27, crop_dimensions= 7, crops_no= 9):
+def read_jigsaw_data(data_type= "train", dataset="stl10", permutations_no=100, permutations_chosen=3, crop_area= 90, crop_dimensions= 27, crops_no= 9):
     try:
         file = h5py.File("data/unsupervised/"+ str(data_type)+ "_" + str(permutations_no) + '.h5', 'r')
     except FileNotFoundError:
-        generate_jigsaw_data(data_type=data_type, dataset=dataset, permutations_no=permutations_no, crop_area=crop_area, crop_dimensions=crop_dimensions, crops_no=crops_no)
+        print("Jigsaw " + str(data_type) + " dataset generating for: " + str(permutations_no) + " permutations, from which: " + str(permutations_chosen) + " chosen per image")
+        generate_jigsaw_data(data_type=data_type, dataset=dataset, permutations_no=permutations_no, permutations_chosen=permutations_chosen, crop_area=crop_area, crop_dimensions=crop_dimensions, crops_no=crops_no)
         file = h5py.File("data/unsupervised/"+ str(data_type)+ "_" + str(permutations_no) + '.h5', 'r')
     x_saved = list(file[data_type + '_data'])
     y_saved = np.array(file[data_type + "_labels"])
@@ -129,8 +149,18 @@ def read_jigsaw_data(data_type= "train", dataset="cifar10", permutations_no=100,
     return x_saved, y_saved
     
 
-x,y = read_jigsaw_data("validation")
-print(x[0].shape)
+# x,y = read_jigsaw_data("test")
+# img = Image.fromarray(x[0][0].astype("uint8"))
+# img.show()
+# img = Image.fromarray(x[1][0].astype("uint8"))
+# img.show()
+# img = Image.fromarray(x[2][0].astype("uint8"))
+# img.show()
+# img = Image.fromarray(x[3][0].astype("uint8"))
+# img.show()
+# img = Image.fromarray(x[4][0].astype("uint8"))
+# img.show()
+# print(x[0].shape)
 # # Getting the hamming set if available otherwise generate a hamming set
 
 # file = h5py.File("data/unsupervised/train_100.h5", 'r')
