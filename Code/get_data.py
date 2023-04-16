@@ -3,7 +3,7 @@ import pickle
 import numpy as np
 from PIL import Image
 
-from utils import encode
+from Code.utils import encode
 
 from sklearn.model_selection import train_test_split
 
@@ -156,7 +156,7 @@ def get_semisupervised_data(dataset="stl10", no_batches:int = 1):
         unlabeled_data = np.transpose(unlabeled_data, (0, 3, 2, 1)).astype('float32')
         labeled_data = np.reshape(labeled_data, (-1, 3, 96, 96))
         labeled_data = np.transpose(labeled_data, (0, 3, 2, 1)).astype('float32')
-        labeled_data, validation_data, training_labels, validation_labels = train_test_split(labeled_data, training_labels, test_size=0.2, random_state=35)
+        labeled_data, validation_data, training_labels, validation_labels = train_test_split(labeled_data, training_labels, test_size=0.1, random_state=35, shuffle=True)
         
     elif dataset == "cifar10":
         unlabeled_data = np.array(unlabeled_data).reshape(len(unlabeled_data),3,32,32).transpose(0,2,3,1)

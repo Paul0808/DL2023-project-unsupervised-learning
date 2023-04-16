@@ -3,7 +3,7 @@ from keras.models import Model
 from keras.layers import Input, Concatenate, Conv2D, BatchNormalization, Activation, Add, ZeroPadding2D, MaxPool2D, AveragePooling2D, Flatten, Dense, Rescaling
 from keras import backend
 
-from color_affine_layer import RandomColorAffine
+from Code.color_affine_layer import RandomColorAffine
 
 # Block that passes forward the residual input to the output
 def identity_mapping(input, filters_no, channels_axis= 3):

@@ -7,17 +7,18 @@ from keras.utils import plot_model
 import pickle as pkl
 from numpy import concatenate
 
-from resnet_backbone import resnet_creator
-from utils import get_compiler_parameters
-from jigsaw_creator import read_jigsaw_data
-from get_data import get_semisupervised_data, get_test_data
+from Code.resnet_backbone import resnet_creator
+from Code.utils import get_compiler_parameters
+from Code.jigsaw_creator import read_jigsaw_data
+from Code.get_data import get_semisupervised_data, get_test_data
+
 from os import mkdir, environ
 from pathlib import Path
 
 # TODO: remove to run on gpu
 environ["CUDA_VISIBLE_DEVICES"] = "-1"
 class CFN(Model):
-    def __init__(self, dataset="cifar10", permutations_no=100, crop_dimensions=27, crops_no=9, channels_no=3, resnet_architecture=[1, 1, 1], *args, **kwargs):
+    def __init__(self, dataset="cifar10", permutations_no=100, crop_dimensions=7, crops_no=9, channels_no=3, resnet_architecture=[1, 1, 1], *args, **kwargs):
         self.dataset = dataset
         self.permutations_no = permutations_no
         self.crop_dimensions = crop_dimensions
@@ -93,7 +94,7 @@ class CFN(Model):
         return super().__call__(*args, **kwargs)
 
 class CFN_transfer(Model):
-    def __init__(self,dataset="cifar10", classes_no=10, image_dimensions=96, siamese_no=9, channels_no=3, resnet_architecture=[1, 1, 1], *args, **kwargs):
+    def __init__(self,dataset="cifar10", classes_no=10, image_dimensions=32, siamese_no=9, channels_no=3, resnet_architecture=[1, 1, 1], *args, **kwargs):
         self.dataset = dataset
         self.classes_no= classes_no
         self.image_dimensions= image_dimensions

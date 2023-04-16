@@ -1,5 +1,5 @@
-from get_data import get_unsupervised_data
-from utils import generate_hamming, encode
+from Code.get_data import get_unsupervised_data
+from Code.utils import generate_hamming, encode
 
 from random import randrange, randint, sample, seed
 
@@ -135,7 +135,17 @@ def generate_jigsaw_data(data_type= "train", dataset="cifar10", permutations_no=
     # Returning the jigsaw data and labels
     return x,y
 
-def read_jigsaw_data(data_type= "train", dataset="stl10", permutations_no=100, permutations_chosen=3, crop_area= 90, crop_dimensions= 27, crops_no= 9):
+def read_jigsaw_data(data_type= "train", dataset="stl10", permutations_no=100, crops_no= 9):
+    if dataset == "stl10":
+        permutations_chosen=3
+        crop_area= 90
+        crop_dimensions= 27
+    
+    elif dataset == "cifar10":
+        permutations_chosen=20
+        crop_area= 30
+        crop_dimensions= 3
+    
     try:
         file = h5py.File("data/unsupervised/" + str(dataset) + "_" + str(data_type)+ "_" + str(permutations_no) + '.h5', 'r')
     except FileNotFoundError:

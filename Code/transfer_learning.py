@@ -1,29 +1,39 @@
 from keras.models import Model, load_model
-from models import CFN_transfer, CFN
-from get_data import get_semisupervised_data, get_test_data
+
+from Code.models import CFN, CFN_transfer
+
+from Code.get_data import get_semisupervised_data, get_test_data
+from Code.utils import get_compiler_parameters
 
 import pickle as pkl
 from numpy import concatenate
 
-from utils import get_compiler_parameters
 from os import mkdir, environ
 from pathlib import Path
 
 def transfer_weights(dataset="cifar10"):
     if dataset == "cifar10":
-        model = load_model("models/CFN_cifar_100.hdf5", custom_objects={"CFN": CFN})#custom_objects={"CustomModel": CustomModel}
+        try:
+            model = load_model("models/CFN_cifar_100.hdf5", custom_objects={"CFN": CFN})#custom_objects={"CustomModel": CustomModel}
+        except FileNotFoundError:
+            raise Exception("Model not found try trining the CFN in the self-supervised task for the " + dataset + " dataset")
+        transfered_model = CFN_transfer(dataset=dataset,image_dimensions=32)
     elif dataset == "stl10":
-        model = load_model("models/CFN_stl_100.hdf5", custom_objects={"CFN": CFN})
+        try:
+            model = load_model("models/CFN_stl_100.hdf5", custom_objects={"CFN": CFN})
+        except FileNotFoundError:
+            raise Exception("Model not found try trining the CFN in the self-supervised task for the " + dataset + " dataset")
+        transfered_model = CFN_transfer(dataset=dataset,image_dimensions=96)
 
-    transfered_model = CFN_transfer()
-    print(len(transfered_model.layers)-25, (len(transfered_model.layers)-25)/3)
+    
     # Transfering the weights from the pretrained model to the new model, without the input/inputs 
     # and the last 105 layers from the pretrained This means that only the weights up to and including the second resnet block will be transfered
     # The last 105 layers represent the last resnet block and the layers after.
-    for i in range(1,int((len(transfered_model.layers)-105))):
+    for i in range(1,len(transfered_model.layers)-105):
         # print(transfered_model.layers[i], model.layers[8+i])
         # print(transfered_model.layers[i].output_shape, model.layers[8+i].output_shape)
         transfered_model.layers[i].set_weights(model.layers[8+i].weights)
+        transfered_model.layers[i].trainable = False
     
     del model
     return transfered_model
@@ -32,7 +42,9 @@ def perform_transfered_task(dataset= "cifar10", epochs=100, batch_size=64):
     # Getting compile parameters and model with transfered weights
     optimizer, callbacks = get_compiler_parameters()
     model = transfer_weights(dataset= dataset)
+
     model.compile(optimizer= optimizer, metrics= ["accuracy"], loss= "categorical_crossentropy")
+    model.summary()
 
     # Getting data
     x_train, y_train, x_validation, y_validation, unlabeled = get_semisupervised_data(dataset=dataset)
@@ -84,3 +96,5 @@ def perform_transfered_task(dataset= "cifar10", epochs=100, batch_size=64):
     print("Test accuracy full: " + str(scores[1]))
     
     return history, scores
+
+perform_transfered_task(dataset="cifar10")
